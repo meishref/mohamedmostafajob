@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api/v1',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Required on Render (and other reverse proxies) so HTTPS, host, and client IP are detected correctly.
+        $middleware->trustProxies(at: '*');
+
         $middleware->statefulApi();
         $middleware->throttleApi('api');
 

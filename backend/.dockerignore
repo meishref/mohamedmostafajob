@@ -1,0 +1,53 @@
+# Git & IDE
+.git
+.gitignore
+.gitattributes
+.editorconfig
+.idea
+.vscode
+*.md
+!DEPLOYMENT.md
+
+# Environment (never bake secrets into the image)
+.env
+.env.*
+!.env.example
+
+# Dependencies (installed inside the image)
+/vendor
+/node_modules
+
+# Laravel runtime / local artifacts
+/storage/*.key
+/storage/pail
+/storage/logs/*
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/bootstrap/cache/*.php
+/public/hot
+/public/storage
+
+# Tests & dev tooling
+/tests
+/phpunit.xml
+.phpunit.result.cache
+.phpunit.cache
+/.phpunit.cache
+/pint.json
+/.pint.cache
+
+# Frontend dev
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker (avoid recursive context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
