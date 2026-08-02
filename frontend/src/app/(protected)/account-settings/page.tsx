@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorState } from "@/components/common/error-state";
 import { FormField } from "@/components/common/form-field";
 import { PageHeader } from "@/components/common/page-header";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
@@ -23,7 +24,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 export default function AccountSettingsPage() {
-  const { data, isLoading } = useCurrentUser();
+  const { data, isLoading, isError, refetch } = useCurrentUser();
   const updateSettings = useUpdateAccountSettings();
   const { parseError } = useApiError();
   const t = useTranslations("accountSettings");
@@ -66,6 +67,10 @@ export default function AccountSettingsPage() {
         <LoadingSpinner size="lg" />
       </div>
     );
+  }
+
+  if (isError || !data?.user) {
+    return <ErrorState onRetry={() => refetch()} />;
   }
 
   return (

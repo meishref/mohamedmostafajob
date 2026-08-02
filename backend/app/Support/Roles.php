@@ -19,6 +19,7 @@ class Roles
     public static function forDisplay(iterable $roles): array
     {
         return collect($roles)
+            ->map(fn ($role) => (string) $role)
             ->map(fn (string $role) => $role === 'user' ? 'employee' : $role)
             ->filter(fn (string $role) => self::isAssignable($role))
             ->unique()

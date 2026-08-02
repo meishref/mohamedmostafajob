@@ -159,6 +159,11 @@ class UserService
         return $user->load('roles');
     }
 
+    public function ensureEmployeeRole(User $user): User
+    {
+        return $this->assignRole($user, 'employee');
+    }
+
     /**
      * Employee role users must have a linked Employee record to receive/see assigned tasks.
      */

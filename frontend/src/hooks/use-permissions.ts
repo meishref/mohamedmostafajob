@@ -1,15 +1,16 @@
 "use client";
 
 import { useCurrentUser } from "@/hooks/use-auth";
+import { userHasRole, userIsAdmin, userIsEmployee } from "@/lib/roles";
 
 export function usePermissions() {
   const { data } = useCurrentUser();
   const user = data?.user;
 
-  const hasRole = (role: string) => user?.roles?.includes(role) ?? false;
+  const hasRole = (role: string) => userHasRole(user?.roles, role);
   const hasPermission = (permission: string) =>
     user?.permissions?.includes(permission) ?? false;
-  const isAdmin = hasRole("admin");
+  const isAdmin = userIsAdmin(user?.roles);
 
   const canViewOwnTasks = hasPermission("tasks.view-own") || isAdmin;
   const canUpdateTaskStatus = hasPermission("tasks.update-status") || isAdmin;
@@ -17,13 +18,7 @@ export function usePermissions() {
   const canViewTasks =
     hasPermission("tasks.view") || hasPermission("tasks.view-own") || isAdmin;
 
-  const hasEmployeeLinkedPermissions =
-    hasPermission("tasks.view-own") ||
-    hasPermission("tasks.update-status") ||
-    hasPermission("tasks.comment");
-
-  const isEmployee =
-    !isAdmin && (hasRole("employee") || hasEmployeeLinkedPermissions);
+  const isEmployee = userIsEmployee(user?.roles, user?.permissions);
 
   return {
     user,

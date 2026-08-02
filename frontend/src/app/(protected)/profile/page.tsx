@@ -1,5 +1,6 @@
 "use client";
 
+import { ErrorState } from "@/components/common/error-state";
 import { FormField } from "@/components/common/form-field";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,14 +17,12 @@ import {
 } from "@/lib/validations/auth.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 export default function ProfilePage() {
-  const searchParams = useSearchParams();
-  const { data, isLoading, refetch } = useCurrentUser();
+  const { data, isLoading, isError, refetch } = useCurrentUser();
   const updateProfile = useUpdateProfile();
   const { parseError } = useApiError();
   const t = useTranslations("profile");
@@ -52,11 +51,15 @@ export default function ProfilePage() {
   }, [data, reset]);
 
   useEffect(() => {
-    if (searchParams.get("google_auth") === "success") {
-      toast.success(tAuth("googleSignInSuccess"));
-      refetch();
-    }
-  }, [searchParams, refetch, tAuth]);
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google_auth") !== "success") return;
+
+    toast.success(tAuth("googleSignInSuccess"));
+    void refetch();
+    window.history.replaceState({}, "", "/profile");
+  }, [refetch, tAuth]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -89,7 +92,11 @@ export default function ProfilePage() {
     );
   }
 
-  const user = data!.user;
+  if (isError || !data?.user) {
+    return <ErrorState onRetry={() => refetch()} />;
+  }
+
+  const user = data.user;
   const initials = user.name
     .split(" ")
     .map((n) => n[0])
@@ -113,7 +120,7 @@ export default function ProfilePage() {
             <div>
               <p className="font-medium">{user.name}</p>
               <p className="text-sm text-muted-foreground">{user.email}</p>
-              <div className="mt-1 flex gap-2">
+              <div className="mt-1 flex flex-wrap gap-2">
                 <Badge variant="secondary">{user.status_label}</Badge>
                 <RoleBadges roles={user.roles} />
               </div>

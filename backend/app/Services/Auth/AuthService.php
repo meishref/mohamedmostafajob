@@ -10,6 +10,7 @@ use App\Exceptions\ApiException;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\System\SystemEventService;
+use App\Services\User\UserService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,7 @@ class AuthService
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
         private readonly SystemEventService $systemEventService,
+        private readonly UserService $userService,
     ) {}
 
     public function register(RegisterDTO $dto): User
@@ -43,7 +45,7 @@ class AuthService
             'status' => UserStatus::Active,
         ]);
 
-        $user->assignRole('employee');
+        $this->userService->ensureEmployeeRole($user);
 
         event(new Registered($user));
 

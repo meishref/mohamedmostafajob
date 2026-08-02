@@ -7,6 +7,7 @@ use App\Exceptions\ApiException;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Services\System\SystemEventService;
+use App\Services\User\UserService;
 use App\Support\SecureUploadValidator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -18,6 +19,7 @@ class ProfileService
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
         private readonly SystemEventService $systemEventService,
+        private readonly UserService $userService,
     ) {}
 
     public function updateProfile(User $user, array $data, ?UploadedFile $profileImage = null): User
@@ -100,9 +102,7 @@ class ProfileService
             'email_verified_at' => now(),
         ]);
 
-        $user->assignRole('employee');
-
-        return $user;
+        return $this->userService->ensureEmployeeRole($user);
     }
 
     private function downloadGoogleAvatar(?string $avatarUrl): ?string

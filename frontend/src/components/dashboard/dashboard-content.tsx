@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/hooks/use-auth";
 import { useDashboard } from "@/hooks/use-dashboard";
+import { userIsEmployee } from "@/lib/roles";
 import { useFormatters } from "@/hooks/use-formatters";
 import type { AdminDashboardData } from "@/types/dashboard";
 import {
@@ -248,13 +249,7 @@ function AdminDashboard({
 export function DashboardContent() {
   const { data: auth, isLoading: authLoading } = useCurrentUser();
   const { data, isLoading, isError, refetch, isFetching } = useDashboard();
-  const isEmployee =
-    Boolean(auth?.user) &&
-    !auth?.user?.roles?.includes("admin") &&
-    (auth?.user?.roles?.includes("employee") ||
-      auth?.user?.permissions?.some((p) =>
-        ["tasks.view-own", "tasks.update-status", "tasks.comment"].includes(p),
-      ));
+  const isEmployee = userIsEmployee(auth?.user?.roles, auth?.user?.permissions);
 
   if (authLoading || isLoading || !auth?.user) {
     return (

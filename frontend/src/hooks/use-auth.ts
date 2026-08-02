@@ -28,6 +28,7 @@ export function useCurrentUser(enabled = true) {
     queryFn: () => authService.me(),
     retry: false,
     enabled,
+    staleTime: 60_000,
   });
 }
 
@@ -104,8 +105,8 @@ export function useUpdateProfile() {
 
   return useMutation({
     mutationFn: (payload: UpdateProfileData) => profileService.updateProfile(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: authKeys.all });
+    onSuccess: (data) => {
+      queryClient.setQueryData(authKeys.me(), data);
     },
   });
 }
@@ -116,8 +117,8 @@ export function useUpdateAccountSettings() {
   return useMutation({
     mutationFn: (payload: UpdateAccountSettingsData) =>
       profileService.updateAccountSettings(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: authKeys.all });
+    onSuccess: (data) => {
+      queryClient.setQueryData(authKeys.me(), data);
     },
   });
 }

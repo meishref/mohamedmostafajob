@@ -20,7 +20,9 @@ class UserResource extends JsonResource
             'status' => $this->status?->value,
             'status_label' => $this->status?->label(),
             'email_verified_at' => $this->email_verified_at?->toISOString(),
-            'roles' => $this->whenLoaded('roles', fn () => Roles::forDisplay($this->roles->pluck('name'))),
+            'roles' => $this->whenLoaded('roles', fn () => Roles::forDisplay(
+                $this->roles->pluck('name')->all(),
+            )),
             'permissions' => $this->whenLoaded('permissions', fn () => $this->getAllPermissions()->pluck('name')),
             'deleted_at' => $this->deleted_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
