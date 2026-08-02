@@ -43,7 +43,7 @@ export default function EditUserPage() {
         email: data.user.email,
         phone: data.user.phone ?? "",
         status: data.user.status as UpdateUserFormValues["status"],
-        role: (data.user.roles?.[0] ?? "user") as UpdateUserFormValues["role"],
+        role: (data.user.roles?.[0] ?? "employee") as UpdateUserFormValues["role"],
       });
     }
   }, [data, reset]);

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { z } from "zod";
 
-const USER_ROLES = ["admin", "employee", "user"] as const;
+const USER_ROLES = ["admin", "employee"] as const;
 
 export function useCreateUserSchema() {
   const t = useTranslations("validation");

@@ -128,9 +128,7 @@ apiClient.interceptors.request.use(
 
     if (MUTATING_METHODS.has(method)) {
       await ensureCsrfCookie();
-      if (!clientConfig.sameOrigin) {
-        applyXsrfHeader(config);
-      }
+      applyXsrfHeader(config);
     }
 
     return config;
@@ -183,7 +181,7 @@ async function fetchCsrfCookie(): Promise<void> {
   if (contentType.includes("text/html")) {
     throw new ApiError(
       clientConfig.sameOrigin
-        ? "API proxy returned HTML. Set BACKEND_PROXY_URL to your ngrok URL and restart the frontend (npm run dev / npm run start)."
+        ? "API proxy returned HTML instead of JSON. Ensure BACKEND_PROXY_URL is set to your ngrok URL, ngrok is running, and restart the frontend."
         : "Ngrok returned an HTML page instead of the API. Verify NEXT_PUBLIC_BACKEND_URL and ngrok-skip-browser-warning.",
       0,
     );
@@ -195,16 +193,20 @@ async function fetchCsrfCookie(): Promise<void> {
     xsrfToken = readCookie("XSRF-TOKEN");
   }
 
-  if (!xsrfToken) {
-    if (clientConfig.sameOrigin) {
-      throw new ApiError(
-        "CSRF cookie was not set. Ensure BACKEND_PROXY_URL points to ngrok, backend is running, and restart the frontend after changing .env.",
-        0,
-      );
-    }
+  const okStatus = response.status === 204 || response.status === 200;
 
+  if (!xsrfToken && !okStatus) {
     throw new ApiError(
-      "CSRF token was not received. Use same-origin proxy: set NEXT_PUBLIC_API_URL and NEXT_PUBLIC_BACKEND_URL to your frontend URL (e.g. http://168.231.111.10:3000) and BACKEND_PROXY_URL to ngrok, then restart the frontend.",
+      `CSRF setup failed (HTTP ${response.status}). Check BACKEND_PROXY_URL and that Laravel is running.`,
+      0,
+    );
+  }
+
+  if (!xsrfToken) {
+    throw new ApiError(
+      clientConfig.sameOrigin
+        ? "CSRF cookie was not set. Use BACKEND_PROXY_URL=http://127.0.0.1:8000, set SESSION_SECURE_COOKIE=false in backend/.env, pull latest frontend code, and restart."
+        : "CSRF token was not received. Use same-origin proxy via NEXT_PUBLIC_* on :3000 and BACKEND_PROXY_URL.",
       0,
     );
   }

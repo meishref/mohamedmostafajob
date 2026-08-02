@@ -29,7 +29,7 @@ export default function NewUserPage() {
     formState: { errors },
   } = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { status: "active", role: "user" },
+    defaultValues: { status: "active", role: "employee" },
   });
 
   const onSubmit = async (values: CreateUserFormValues) => {

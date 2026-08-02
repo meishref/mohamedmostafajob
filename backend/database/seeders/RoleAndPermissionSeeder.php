@@ -53,11 +53,9 @@ class RoleAndPermissionSeeder extends Seeder
         }
 
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $userRole = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
         $employeeRole = Role::firstOrCreate(['name' => 'employee', 'guard_name' => 'web']);
 
         $adminRole->syncPermissions(Permission::all());
-        $userRole->syncPermissions([]);
         $employeeRole->syncPermissions([
             'tasks.view-own',
             'tasks.update-status',

@@ -43,7 +43,7 @@ class AuthService
             'status' => UserStatus::Active,
         ]);
 
-        $user->assignRole('user');
+        $user->assignRole('employee');
 
         event(new Registered($user));
 

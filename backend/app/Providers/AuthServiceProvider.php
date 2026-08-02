@@ -30,6 +30,10 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Gate::before(function (?User $user) {
+            return $user?->hasRole('admin') ? true : null;
+        });
+
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Employee::class, EmployeePolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);

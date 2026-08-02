@@ -100,7 +100,7 @@ class ProfileService
             'email_verified_at' => now(),
         ]);
 
-        $user->assignRole('user');
+        $user->assignRole('employee');
 
         return $user;
     }
