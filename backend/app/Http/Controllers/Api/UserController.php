@@ -151,7 +151,7 @@ class UserController extends BaseController
 
     public function roles(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', User::class);
+        $this->authorize('create', User::class);
 
         $roles = \Spatie\Permission\Models\Role::query()
             ->where('guard_name', 'web')

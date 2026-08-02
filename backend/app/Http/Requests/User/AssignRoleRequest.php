@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\User;
 
+use App\Models\User;
 use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -10,7 +11,9 @@ class AssignRoleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('users.update') ?? false;
+        $target = User::query()->find($this->route('user'));
+
+        return $target && (bool) $this->user()?->can('assignRole', $target);
     }
 
     public function rules(): array

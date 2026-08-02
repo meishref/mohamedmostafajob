@@ -3,6 +3,7 @@
 namespace App\Http\Requests\User;
 
 use App\Enums\UserStatus;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -11,7 +12,7 @@ class IndexUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('users.view') ?? false;
+        return (bool) $this->user()?->can('viewAny', User::class);
     }
 
     public function rules(): array
