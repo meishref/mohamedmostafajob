@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\User;
 
+use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,7 +16,7 @@ class AssignRoleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role' => ['required', 'string', Rule::exists('roles', 'name')],
+            'role' => ['required', 'string', Rule::in(Roles::assignable())],
         ];
     }
 }

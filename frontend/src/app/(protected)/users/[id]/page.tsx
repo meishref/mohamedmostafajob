@@ -12,7 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PasswordInput } from "@/components/ui/password-input";
 import { Separator } from "@/components/ui/separator";
 import { Select } from "@/components/ui/select";
-import { useApiError } from "@/hooks/use-api-error";
+import { RoleBadges } from "@/components/users/role-badges";
+import { useRoleLabel } from "@/hooks/use-role-label";
 import { useFormatters } from "@/hooks/use-formatters";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
@@ -44,6 +45,7 @@ export default function UserDetailsPage() {
   const userId = params.id as string;
   const { data, isLoading, isError, refetch } = useUser(userId);
   const { data: roles = [] } = useRoles();
+  const roleLabel = useRoleLabel();
   const { parseError } = useApiError();
   const {
     canUpdateUsers,
@@ -214,11 +216,7 @@ export default function UserDetailsPage() {
               >
                 {user.status_label}
               </Badge>
-              {user.roles?.map((role) => (
-                <Badge key={role} variant="outline" className="capitalize">
-                  {role}
-                </Badge>
-              ))}
+              <RoleBadges roles={user.roles} />
               {user.deleted_at && <Badge variant="destructive">{t("detail.deletedBadge")}</Badge>}
             </div>
             <dl className="grid gap-2 text-sm sm:grid-cols-2">
@@ -260,8 +258,8 @@ export default function UserDetailsPage() {
               className="max-w-xs"
             >
               {roles.map((role) => (
-                <option key={role} value={role} className="capitalize">
-                  {role}
+                <option key={role} value={role}>
+                  {roleLabel(role)}
                 </option>
               ))}
             </Select>

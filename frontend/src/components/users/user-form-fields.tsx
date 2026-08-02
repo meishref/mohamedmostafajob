@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { USER_STATUSES } from "@/types/users";
 import type { CreateUserFormValues, UpdateUserFormValues } from "@/lib/validations/user.schema";
 import { useRoles } from "@/hooks/use-users";
+import { useRoleLabel } from "@/hooks/use-role-label";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import type { FieldErrors, UseFormRegister } from "react-hook-form";
@@ -48,6 +49,7 @@ export function UserFormFields(props: UserFormFieldsProps) {
   const register = props.register as UseFormRegister<CreateUserFormValues & UpdateUserFormValues>;
   const errors = props.errors as FieldErrors<CreateUserFormValues & UpdateUserFormValues>;
   const { data: roles = [], isLoading: rolesLoading } = useRoles();
+  const roleLabel = useRoleLabel();
 
   return (
     <div className="space-y-4">
@@ -80,8 +82,8 @@ export function UserFormFields(props: UserFormFieldsProps) {
         <Select id="role" {...register("role")} disabled={rolesLoading}>
           {rolesLoading && <option value="">{t("loadingRoles")}</option>}
           {roles.map((role) => (
-            <option key={role} value={role} className="capitalize">
-              {role}
+            <option key={role} value={role}>
+              {roleLabel(role)}
             </option>
           ))}
         </Select>

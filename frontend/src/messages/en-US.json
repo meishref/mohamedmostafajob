@@ -99,6 +99,10 @@
     "hoursAgo": "{count}h ago",
     "daysAgo": "{count}d ago"
   },
+  "roles": {
+    "admin": "Admin",
+    "employee": "Employee"
+  },
   "nav": {
     "account": "Account",
     "management": "Management",

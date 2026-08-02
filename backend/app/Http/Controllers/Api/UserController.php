@@ -11,6 +11,7 @@ use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\User\UserService;
+use App\Support\Roles;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -154,6 +155,8 @@ class UserController extends BaseController
 
         $roles = \Spatie\Permission\Models\Role::query()
             ->where('guard_name', 'web')
+            ->whereIn('name', Roles::assignable())
+            ->orderBy('name')
             ->pluck('name');
 
         return $this->successResponse(['roles' => $roles]);

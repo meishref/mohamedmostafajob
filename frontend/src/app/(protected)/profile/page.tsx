@@ -4,6 +4,7 @@ import { FormField } from "@/components/common/form-field";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { RoleBadges } from "@/components/users/role-badges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -114,11 +115,7 @@ export default function ProfilePage() {
               <p className="text-sm text-muted-foreground">{user.email}</p>
               <div className="mt-1 flex gap-2">
                 <Badge variant="secondary">{user.status_label}</Badge>
-                {user.roles?.map((role) => (
-                  <Badge key={role} variant="outline">
-                    {role}
-                  </Badge>
-                ))}
+                <RoleBadges roles={user.roles} />
               </div>
             </div>
           </div>

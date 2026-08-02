@@ -11,8 +11,16 @@ class EmployeeOptionsController extends BaseController
 {
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         abort_unless(
-            $request->user()?->can('employees.view') || $request->user()?->can('tasks.view'),
+            $user && (
+                $user->hasRole('admin')
+                || $user->can('employees.view')
+                || $user->can('tasks.view')
+                || $user->can('tasks.view-own')
+                || $user->can('tasks.create')
+            ),
             403,
         );
 

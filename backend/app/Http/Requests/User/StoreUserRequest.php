@@ -3,6 +3,7 @@
 namespace App\Http\Requests\User;
 
 use App\Enums\UserStatus;
+use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -22,7 +23,7 @@ class StoreUserRequest extends FormRequest
             'password' => ['required', 'confirmed', Password::defaults()],
             'phone' => ['nullable', 'string', 'max:20'],
             'status' => ['nullable', Rule::enum(UserStatus::class)],
-            'role' => ['required', 'string', Rule::exists('roles', 'name')],
+            'role' => ['required', 'string', Rule::in(Roles::assignable())],
             'profile_image' => ['nullable', 'image', 'max:2048'],
         ];
     }

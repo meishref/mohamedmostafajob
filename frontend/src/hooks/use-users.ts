@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { userService } from "@/services/user.service";
+import { filterAssignableRoles } from "@/lib/roles";
 import type {
   AssignRoleData,
   CreateUserData,
@@ -42,7 +43,7 @@ export function useUser(id: string, enabled = true) {
 export function useRoles() {
   return useQuery({
     queryKey: userKeys.roles(),
-    queryFn: () => userService.getRoles(),
+    queryFn: async () => filterAssignableRoles(await userService.getRoles()),
   });
 }
 

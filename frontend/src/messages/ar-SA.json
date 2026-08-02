@@ -99,6 +99,10 @@
     "hoursAgo": "منذ {count} س",
     "daysAgo": "منذ {count} ي"
   },
+  "roles": {
+    "admin": "مدير",
+    "employee": "موظف"
+  },
   "nav": {
     "account": "الحساب",
     "management": "الإدارة",

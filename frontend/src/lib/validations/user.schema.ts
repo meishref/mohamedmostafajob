@@ -4,7 +4,10 @@ import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { z } from "zod";
 
-const USER_ROLES = ["admin", "employee"] as const;
+import { ASSIGNABLE_ROLES } from "@/lib/roles";
+import { z } from "zod";
+
+const USER_ROLES = ASSIGNABLE_ROLES;
 
 export function useCreateUserSchema() {
   const t = useTranslations("validation");

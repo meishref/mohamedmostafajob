@@ -23,6 +23,8 @@ import { useFormatters } from "@/hooks/use-formatters";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useDeleteUser, useRestoreUser, useUsers } from "@/hooks/use-users";
 import { useRoles } from "@/hooks/use-users";
+import { useRoleLabel } from "@/hooks/use-role-label";
+import { RoleBadges } from "@/components/users/role-badges";
 import { USER_STATUSES, type UserListParams } from "@/types/users";
 import { Eye, Pencil, Plus, RotateCcw, Trash2, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -38,6 +40,7 @@ export default function UsersPage() {
   const { canCreateUsers, canDeleteUsers, canRestoreUsers } = usePermissions();
   const confirm = useConfirm();
   const { data: roles = [] } = useRoles();
+  const roleLabel = useRoleLabel();
   const [searchInput, setSearchInput] = useState("");
   const [params, setParams] = useState<UserListParams>({
     page: 1,
@@ -146,8 +149,8 @@ export default function UsersPage() {
             >
               <option value="">{t("allRoles")}</option>
               {roles.map((role) => (
-                <option key={role} value={role} className="capitalize">
-                  {role}
+                <option key={role} value={role}>
+                  {roleLabel(role)}
                 </option>
               ))}
             </Select>
@@ -255,11 +258,7 @@ export default function UsersPage() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.phone ?? tCommon("na")}</TableCell>
                   <TableCell>
-                    {user.roles?.map((role) => (
-                      <Badge key={role} variant="outline" className="mr-1 capitalize">
-                        {role}
-                      </Badge>
-                    ))}
+                    <RoleBadges roles={user.roles} className="mr-1" />
                   </TableCell>
                   <TableCell>
                     <Badge
