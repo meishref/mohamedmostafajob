@@ -9,10 +9,10 @@ use App\Models\TaskComment;
 use App\Models\TaskStatus;
 use App\Models\User;
 use App\Repositories\Contracts\TaskRepositoryInterface;
+use App\Services\Mail\MailDeliveryService;
 use App\Services\System\SystemEventService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpFoundation\Response;
 
 class TaskService
@@ -20,6 +20,7 @@ class TaskService
     public function __construct(
         private readonly TaskRepositoryInterface $taskRepository,
         private readonly SystemEventService $systemEventService,
+        private readonly MailDeliveryService $mailDeliveryService,
     ) {}
 
     public function list(array $filters, ?User $user = null): LengthAwarePaginator
@@ -176,7 +177,10 @@ class TaskService
             return;
         }
 
-        Mail::to($user->email)->send(new TaskAssignedMail($task, $user, $action));
+        $this->mailDeliveryService->send(
+            new TaskAssignedMail($task, $user, $action),
+            $user->email,
+        );
     }
 
     private function resolveCompletedAt(string $taskStatusId): ?\DateTimeInterface

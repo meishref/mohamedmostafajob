@@ -17,6 +17,25 @@ const HOP_BY_HOP_HEADERS = new Set([
 
 const STRIPPED_RESPONSE_HEADERS = new Set(["content-encoding", "content-length"]);
 
+function resolveFrontendOrigin(request: NextRequest): string | null {
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (configured) {
+    return configured;
+  }
+
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  if (!host) {
+    return null;
+  }
+
+  const proto =
+    request.headers.get("x-forwarded-proto") ??
+    request.nextUrl.protocol.replace(":", "") ??
+    "http";
+
+  return `${proto}://${host.split(",")[0].trim()}`;
+}
+
 function buildBackendUrl(path: string, search: string): URL {
   if (!backendBaseUrl) {
     throw new Error("BACKEND_PROXY_URL is not configured.");
@@ -41,6 +60,16 @@ function forwardRequestHeaders(request: NextRequest): Headers {
   }
 
   headers.set("X-Forwarded-Proto", request.nextUrl.protocol.replace(":", ""));
+
+  const frontendOrigin = resolveFrontendOrigin(request);
+  if (frontendOrigin) {
+    if (!headers.has("origin")) {
+      headers.set("Origin", frontendOrigin);
+    }
+    if (!headers.has("referer")) {
+      headers.set("Referer", `${frontendOrigin}/`);
+    }
+  }
 
   if (backendBaseUrl?.includes("ngrok")) {
     headers.set("ngrok-skip-browser-warning", "true");

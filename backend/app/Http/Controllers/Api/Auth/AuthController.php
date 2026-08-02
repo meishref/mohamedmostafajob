@@ -85,13 +85,9 @@ class AuthController extends Controller
     {
         $user = $this->authService->getAuthenticatedUser();
 
-        if ($user->hasVerifiedEmail()) {
-            return $this->successResponse(null, 'Email already verified.');
-        }
+        $message = $this->authService->sendVerificationEmail($user);
 
-        $user->sendEmailVerificationNotification();
-
-        return $this->successResponse(null, 'Verification link sent to your email address.');
+        return $this->successResponse(null, $message);
     }
 
     public function verifyEmail(Request $request, string $id, string $hash): JsonResponse

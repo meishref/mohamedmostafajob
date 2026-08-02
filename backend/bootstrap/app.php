@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -18,6 +19,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Required on Render (and other reverse proxies) so HTTPS, host, and client IP are detected correctly.
         $middleware->trustProxies(at: '*');
+
+        // Must run before EnsureFrontendRequestsAreStateful (added by statefulApi()).
+        $middleware->api(prepend: [
+            \App\Http\Middleware\TrustProxiedSanctumFrontend::class,
+        ]);
 
         $middleware->statefulApi();
         $middleware->throttleApi('api');
@@ -88,5 +94,35 @@ return Application::configure(basePath: dirname(__DIR__))
                     'data' => null,
                 ], Response::HTTP_NOT_FOUND);
             }
+        });
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
+            if ($e instanceof \App\Exceptions\ApiException
+                || $e instanceof ValidationException
+                || $e instanceof \Illuminate\Auth\Access\AuthorizationException
+                || $e instanceof \Illuminate\Auth\AuthenticationException
+                || $e instanceof \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+            ) {
+                return null;
+            }
+
+            Log::error('Unhandled API exception', [
+                'message' => $e->getMessage(),
+                'exception' => $e::class,
+                'url' => $request->fullUrl(),
+                'method' => $request->method(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => config('app.debug')
+                    ? $e->getMessage()
+                    : 'A server error occurred. Please try again later.',
+                'data' => null,
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         });
     })->create();

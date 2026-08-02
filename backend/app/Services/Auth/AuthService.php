@@ -9,14 +9,18 @@ use App\Enums\UserStatus;
 use App\Exceptions\ApiException;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Services\Mail\MailDeliveryService;
 use App\Services\System\SystemEventService;
 use App\Services\User\UserService;
+use App\Notifications\VerifyEmailNotification;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
+use Throwable;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthService
@@ -25,6 +29,7 @@ class AuthService
         private readonly UserRepositoryInterface $userRepository,
         private readonly SystemEventService $systemEventService,
         private readonly UserService $userService,
+        private readonly MailDeliveryService $mailDeliveryService,
     ) {}
 
     public function register(RegisterDTO $dto): User
@@ -124,7 +129,21 @@ class AuthService
 
     public function sendPasswordResetLink(string $email): string
     {
-        $status = Password::sendResetLink(['email' => $email]);
+        try {
+            $status = Password::sendResetLink(['email' => $email]);
+        } catch (Throwable $exception) {
+            Log::error('Password reset email failed', [
+                'email' => $email,
+                'message' => $exception->getMessage(),
+                'exception' => $exception::class,
+            ]);
+
+            throw new ApiException(
+                message: 'We could not send the password reset email. Please try again later.',
+                statusCode: Response::HTTP_SERVICE_UNAVAILABLE,
+                errors: ['email' => ['We could not send the password reset email. Please try again later.']],
+            );
+        }
 
         if ($status !== Password::RESET_LINK_SENT) {
             throw new ApiException(
@@ -162,5 +181,20 @@ class AuthService
         }
 
         return __($status);
+    }
+
+    public function sendVerificationEmail(User $user): string
+    {
+        if ($user->hasVerifiedEmail()) {
+            return 'Email already verified.';
+        }
+
+        $this->mailDeliveryService->sendNotificationOrFail(
+            $user,
+            new VerifyEmailNotification,
+            'We could not send the verification email. Please try again later.',
+        );
+
+        return 'Verification link sent to your email address.';
     }
 }

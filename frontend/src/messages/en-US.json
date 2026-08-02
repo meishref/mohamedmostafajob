@@ -1023,6 +1023,8 @@
     "network": "Network error. Please check your connection and try again.",
     "serverError": "A server error occurred. Please try again later.",
     "sessionExpired": "Your session has expired. Please sign in again.",
+    "validationFailed": "Please check the form and fix the highlighted fields.",
+    "emailSendFailed": "We could not send the email. Please try again later.",
     "dashboardLoadFailed": "Failed to load dashboard data."
   },
   "locale": {
