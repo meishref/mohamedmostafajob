@@ -14,28 +14,59 @@ export class ApiError extends Error {
   }
 }
 
-function getCookie(name: string): string | null {
+const MUTATING_METHODS = new Set(["post", "put", "patch", "delete"]);
+
+/** Plain CSRF token for cross-origin requests (cookie is on the API host, not readable from JS). */
+let xsrfToken: string | null = null;
+
+function isNgrokBackend(): boolean {
+  return env.backendUrl.includes("ngrok");
+}
+
+function isCrossOriginBackend(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return new URL(env.backendUrl).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function ngrokRequestHeaders(): Record<string, string> {
+  if (!isNgrokBackend()) return {};
+  return { "ngrok-skip-browser-warning": "true" };
+}
+
+function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function applyXsrfHeader(config: InternalAxiosRequestConfig): void {
+  const token = xsrfToken ?? readCookie("XSRF-TOKEN");
+  if (token) {
+    config.headers.set("X-XSRF-TOKEN", token);
+  }
+}
+
 const apiClient: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
+  withCredentials: true,
+  withXSRFToken: !isCrossOriginBackend(),
+  xsrfCookieName: "XSRF-TOKEN",
+  xsrfHeaderName: "X-XSRF-TOKEN",
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
+    ...ngrokRequestHeaders(),
   },
-  withCredentials: true,
 });
-
-const MUTATING_METHODS = new Set(["post", "put", "patch", "delete"]);
 
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const method = config.method?.toLowerCase() ?? "get";
 
-    // Let the browser set multipart boundary — a bare multipart Content-Type breaks validation.
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
       config.headers.delete("Content-Type");
     }
@@ -49,11 +80,14 @@ apiClient.interceptors.request.use(
       config.headers.set("Accept-Language", decodeURIComponent(locale));
     }
 
+    if (isNgrokBackend()) {
+      config.headers.set("ngrok-skip-browser-warning", "true");
+    }
+
     if (MUTATING_METHODS.has(method)) {
-      await getCsrfCookie();
-      const token = getCookie("XSRF-TOKEN");
-      if (token) {
-        config.headers.set("X-XSRF-TOKEN", token);
+      await ensureCsrfCookie();
+      if (isCrossOriginBackend()) {
+        applyXsrfHeader(config);
       }
     }
 
@@ -82,10 +116,44 @@ apiClient.interceptors.response.use(
   },
 );
 
-export async function getCsrfCookie(): Promise<void> {
-  await axios.get(`${env.backendUrl}/sanctum/csrf-cookie`, {
-    withCredentials: true,
-  });
+function storeXsrfTokenFromResponse(headers: Record<string, unknown>): void {
+  const raw =
+    headers["x-xsrf-token"] ??
+    headers["X-XSRF-TOKEN"] ??
+    headers["X-Xsrf-Token"];
+  if (typeof raw === "string" && raw.length > 0) {
+    xsrfToken = raw;
+  }
 }
+
+/** Fetch CSRF cookie + token (uses the same axios instance as all API calls). */
+export async function ensureCsrfCookie(): Promise<void> {
+  const response = await apiClient.get(`${env.backendUrl}/sanctum/csrf-cookie`, {
+    headers: {
+      Accept: "application/json",
+      ...ngrokRequestHeaders(),
+    },
+  });
+
+  const contentType = String(response.headers["content-type"] ?? "");
+  if (contentType.includes("text/html")) {
+    throw new ApiError(
+      "Ngrok returned an HTML page instead of the API. Add ngrok-skip-browser-warning and verify NEXT_PUBLIC_BACKEND_URL.",
+      0,
+    );
+  }
+
+  storeXsrfTokenFromResponse(response.headers as Record<string, unknown>);
+
+  if (!xsrfToken && !readCookie("XSRF-TOKEN")) {
+    throw new ApiError(
+      "CSRF token was not received. Check SANCTUM_STATEFUL_DOMAINS and CORS credentials.",
+      0,
+    );
+  }
+}
+
+/** @deprecated Use ensureCsrfCookie — kept for existing imports */
+export const getCsrfCookie = ensureCsrfCookie;
 
 export { apiClient };

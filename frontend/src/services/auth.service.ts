@@ -1,4 +1,4 @@
-import { apiClient, getCsrfCookie } from "@/lib/api/client";
+import { apiClient, ensureCsrfCookie } from "@/lib/api/client";
 import { env } from "@/config/env";
 import type {
   ApiResponse,
@@ -11,11 +11,10 @@ import type {
 
 export const authService = {
   async getCsrfCookie(): Promise<void> {
-    await getCsrfCookie();
+    await ensureCsrfCookie();
   },
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    await getCsrfCookie();
     const { data } = await apiClient.post<ApiResponse<AuthResponse>>(
       "/auth/register",
       credentials,
@@ -24,7 +23,6 @@ export const authService = {
   },
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    await getCsrfCookie();
     const { data } = await apiClient.post<ApiResponse<AuthResponse>>(
       "/auth/login",
       credentials,
@@ -42,7 +40,6 @@ export const authService = {
   },
 
   async forgotPassword(credentials: ForgotPasswordCredentials): Promise<string> {
-    await getCsrfCookie();
     const { data } = await apiClient.post<ApiResponse<null>>(
       "/auth/forgot-password",
       credentials,
@@ -51,7 +48,6 @@ export const authService = {
   },
 
   async resetPassword(credentials: ResetPasswordCredentials): Promise<string> {
-    await getCsrfCookie();
     const { data } = await apiClient.post<ApiResponse<null>>(
       "/auth/reset-password",
       credentials,
