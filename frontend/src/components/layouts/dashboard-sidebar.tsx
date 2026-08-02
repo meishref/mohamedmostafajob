@@ -77,15 +77,18 @@ function NavLink({
   label,
   icon: Icon,
   active,
+  onNavigate,
 }: {
   href: string;
   label: string;
   icon: typeof User;
   active: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={cn(
         "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
         "hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -108,7 +111,7 @@ function NavLink({
   );
 }
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const pathname = usePathname();
   const permissions = usePermissions();
   const tNav = useTranslations("nav");
@@ -125,10 +128,11 @@ export function DashboardSidebar() {
   }));
 
   return (
-    <nav className="flex h-full flex-col gap-6 overflow-y-auto p-4" aria-label={tCommon("navigation")}>
+    <nav className="flex flex-col gap-6 p-4" aria-label={tCommon("navigation")}>
       <div className="px-3">
         <Link
           href="/dashboard"
+          onClick={onNavigate}
           className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm">
@@ -147,7 +151,14 @@ export function DashboardSidebar() {
         </p>
         <div className="flex flex-col gap-0.5">
           {accountNav.map(({ href, labelKey, icon }) => (
-            <NavLink key={href} href={href} label={tNav(labelKey)} icon={icon} active={isActive(href)} />
+            <NavLink
+              key={href}
+              href={href}
+              label={tNav(labelKey)}
+              icon={icon}
+              active={isActive(href)}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       </div>
@@ -160,7 +171,14 @@ export function DashboardSidebar() {
           {adminNav
             .filter((item) => !item.permission || permissions[item.permission])
             .map(({ href, labelKey, icon }) => (
-              <NavLink key={href} href={href} label={tNav(labelKey)} icon={icon} active={isActive(href)} />
+              <NavLink
+                key={href}
+                href={href}
+                label={tNav(labelKey)}
+                icon={icon}
+                active={isActive(href)}
+                onNavigate={onNavigate}
+              />
             ))}
         </div>
       </div>
@@ -178,6 +196,7 @@ export function DashboardSidebar() {
                 label={tNav(labelKey as "departments")}
                 icon={icon}
                 active={isActive(href)}
+                onNavigate={onNavigate}
               />
             ))}
           </div>

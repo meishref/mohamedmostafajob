@@ -42,9 +42,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Docker — local config only (use *.example as templates)
+# Docker — local/runtime only (templates stay tracked)
 docker-compose.yml
 docker-compose.override.yml
+docker-compose.local.yml
 .env.docker
+.env.docker.local
 !.env.docker.example
 !docker-compose.example.yml
+docker-data/
+.docker/
