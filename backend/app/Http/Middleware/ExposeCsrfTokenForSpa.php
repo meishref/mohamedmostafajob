@@ -22,7 +22,7 @@ class ExposeCsrfTokenForSpa
         /** @var Response $response */
         $response = $next($request);
 
-        if ($request->is('sanctum/csrf-cookie') && $request->session()->isStarted()) {
+        if ($request->is('sanctum/csrf-cookie') && $request->hasSession() && $request->session()->isStarted()) {
             $plain = $request->session()->token();
 
             $encrypted = $this->encrypter->encrypt(
