@@ -3,45 +3,36 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Encryption\Encrypter;
+use Illuminate\Cookie\CookieValuePrefix;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Cross-origin SPAs cannot read the XSRF-TOKEN cookie (it belongs to the API host).
- * Laravel expects X-XSRF-TOKEN to carry the same encrypted value as the cookie.
+ * Laravel decrypts X-XSRF-TOKEN — it must be the same encrypted value as the cookie.
  */
 class ExposeCsrfTokenForSpa
 {
+    public function __construct(private Encrypter $encrypter) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         /** @var Response $response */
         $response = $next($request);
 
-        if (! $request->is('sanctum/csrf-cookie')) {
-            return $response;
-        }
+        if ($request->is('sanctum/csrf-cookie') && $request->session()->isStarted()) {
+            $plain = $request->session()->token();
 
-        $encryptedToken = $this->resolveXsrfCookieValue($request, $response);
+            $encrypted = $this->encrypter->encrypt(
+                CookieValuePrefix::create('XSRF-TOKEN', $this->encrypter->getKey()).$plain,
+                EncryptCookies::serialized('XSRF-TOKEN'),
+            );
 
-        if ($encryptedToken !== null) {
-            $response->headers->set('X-XSRF-TOKEN', $encryptedToken);
+            $response->headers->set('X-XSRF-TOKEN', $encrypted);
         }
 
         return $response;
-    }
-
-    private function resolveXsrfCookieValue(Request $request, Response $response): ?string
-    {
-        /** @var Cookie[] $cookies */
-        $cookies = $response->headers->getCookies();
-
-        foreach ($cookies as $cookie) {
-            if ($cookie->getName() === 'XSRF-TOKEN') {
-                return $cookie->getValue();
-            }
-        }
-
-        return $request->cookies->get('XSRF-TOKEN');
     }
 }

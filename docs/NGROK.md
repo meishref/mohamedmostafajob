@@ -98,24 +98,35 @@ NEXT_PUBLIC_BACKEND_URL=https://abc123.ngrok-free.app
 
 Open app at `http://localhost:3000` (not ngrok).
 
-## 7. Backend ngrok + frontend on server IP
+## 7. Backend ngrok + frontend on server IP (recommended)
 
-If the frontend runs on `http://168.231.111.10:3000` and the API is exposed via ngrok:
+Direct cross-origin calls (browser → ngrok) often fail CSRF/cookies. **Proxy API through Next.js** instead.
+
+**frontend/.env.local**
 
 ```env
-# backend/.env
+NEXT_PUBLIC_API_URL=http://168.231.111.10:3000/api/v1
+NEXT_PUBLIC_BACKEND_URL=http://168.231.111.10:3000
+NEXT_PUBLIC_APP_URL=http://168.231.111.10:3000
+BACKEND_PROXY_URL=https://YOUR-BACKEND.ngrok-free.dev
+```
+
+**backend/.env**
+
+```env
 APP_URL=https://YOUR-BACKEND.ngrok-free.dev
 FRONTEND_URL=http://168.231.111.10:3000
 SANCTUM_STATEFUL_DOMAINS=168.231.111.10:3000
 CORS_ALLOWED_ORIGINS=http://168.231.111.10:3000
-SESSION_SECURE_COOKIE=true
-SESSION_SAME_SITE=none
+SESSION_SECURE_COOKIE=false
+SESSION_SAME_SITE=lax
 ```
 
-After editing `.env`:
+Restart both apps after env changes:
 
 ```bash
 cd backend && php artisan config:clear
+cd ../frontend && npm run build && npm run start   # restart required for next.config rewrites
 ```
 
-In DevTools → login request → verify `X-XSRF-TOKEN` header value **equals** the `XSRF-TOKEN` cookie value. If they differ, clear site cookies and retry.
+The browser only talks to `:3000`; Next.js forwards `/api` and `/sanctum` to ngrok server-side.

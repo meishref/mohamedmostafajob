@@ -16,25 +16,64 @@ export class ApiError extends Error {
 
 const MUTATING_METHODS = new Set(["post", "put", "patch", "delete"]);
 
-/** Encrypted XSRF-TOKEN cookie value for cross-origin requests (must match the cookie sent by the browser). */
+/** Encrypted XSRF-TOKEN value for cross-origin requests. */
 let xsrfToken: string | null = null;
 let csrfPromise: Promise<void> | null = null;
 
-function isNgrokBackend(): boolean {
-  return env.backendUrl.includes("ngrok");
-}
+type ClientApiConfig = {
+  apiBaseUrl: string;
+  csrfCookieUrl: string;
+  sameOrigin: boolean;
+  ngrokDirect: boolean;
+};
 
-function isCrossOriginBackend(): boolean {
-  if (typeof window === "undefined") return false;
+function safeOrigin(url: string, fallback: string): string {
   try {
-    return new URL(env.backendUrl).origin !== window.location.origin;
+    return new URL(url, fallback).origin;
   } catch {
-    return false;
+    return "";
   }
 }
 
-function ngrokRequestHeaders(): Record<string, string> {
-  if (!isNgrokBackend()) return {};
+/** Resolve API URLs at runtime so proxy mode works even if only BACKEND_URL was updated. */
+function resolveClientApiConfig(): ClientApiConfig {
+  const fallback = env.appUrl;
+
+  if (typeof window === "undefined") {
+    const ngrokDirect = env.backendUrl.includes("ngrok") || env.apiUrl.includes("ngrok");
+    return {
+      apiBaseUrl: env.apiUrl,
+      csrfCookieUrl: `${env.backendUrl}/sanctum/csrf-cookie`,
+      sameOrigin: false,
+      ngrokDirect,
+    };
+  }
+
+  const windowOrigin = window.location.origin;
+  const backendOrigin = safeOrigin(env.backendUrl, windowOrigin);
+  const apiOrigin = safeOrigin(env.apiUrl, windowOrigin);
+  const sameOrigin =
+    backendOrigin === windowOrigin || apiOrigin === windowOrigin;
+
+  if (sameOrigin) {
+    return {
+      apiBaseUrl: `${windowOrigin}/api/v1`,
+      csrfCookieUrl: `${windowOrigin}/sanctum/csrf-cookie`,
+      sameOrigin: true,
+      ngrokDirect: false,
+    };
+  }
+
+  return {
+    apiBaseUrl: env.apiUrl,
+    csrfCookieUrl: `${env.backendUrl}/sanctum/csrf-cookie`,
+    sameOrigin: false,
+    ngrokDirect: env.backendUrl.includes("ngrok") || env.apiUrl.includes("ngrok"),
+  };
+}
+
+function ngrokRequestHeaders(config: ClientApiConfig): Record<string, string> {
+  if (!config.ngrokDirect) return {};
   return { "ngrok-skip-browser-warning": "true" };
 }
 
@@ -45,26 +84,29 @@ function readCookie(name: string): string | null {
 }
 
 function applyXsrfHeader(config: InternalAxiosRequestConfig): void {
-  if (xsrfToken) {
-    config.headers.set("X-XSRF-TOKEN", xsrfToken);
+  const token = xsrfToken ?? readCookie("XSRF-TOKEN");
+  if (token) {
+    config.headers.set("X-XSRF-TOKEN", token);
   }
 }
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: env.apiUrl,
   withCredentials: true,
-  withXSRFToken: !isCrossOriginBackend(),
+  withXSRFToken: true,
   xsrfCookieName: "XSRF-TOKEN",
   xsrfHeaderName: "X-XSRF-TOKEN",
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
-    ...ngrokRequestHeaders(),
   },
 });
 
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    const clientConfig = resolveClientApiConfig();
+    config.baseURL = clientConfig.apiBaseUrl;
+
     const method = config.method?.toLowerCase() ?? "get";
 
     if (typeof FormData !== "undefined" && config.data instanceof FormData) {
@@ -80,13 +122,13 @@ apiClient.interceptors.request.use(
       config.headers.set("Accept-Language", decodeURIComponent(locale));
     }
 
-    if (isNgrokBackend()) {
-      config.headers.set("ngrok-skip-browser-warning", "true");
+    for (const [key, value] of Object.entries(ngrokRequestHeaders(clientConfig))) {
+      config.headers.set(key, value);
     }
 
     if (MUTATING_METHODS.has(method)) {
       await ensureCsrfCookie();
-      if (isCrossOriginBackend()) {
+      if (!clientConfig.sameOrigin) {
         applyXsrfHeader(config);
       }
     }
@@ -127,33 +169,42 @@ function storeXsrfTokenFromResponse(headers: Record<string, unknown>): void {
 }
 
 async function fetchCsrfCookie(): Promise<void> {
-  const response = await apiClient.get(`${env.backendUrl}/sanctum/csrf-cookie`, {
+  const clientConfig = resolveClientApiConfig();
+
+  const response = await apiClient.get(clientConfig.csrfCookieUrl, {
+    baseURL: "",
     headers: {
       Accept: "application/json",
-      ...ngrokRequestHeaders(),
+      ...ngrokRequestHeaders(clientConfig),
     },
   });
 
   const contentType = String(response.headers["content-type"] ?? "");
   if (contentType.includes("text/html")) {
     throw new ApiError(
-      "Ngrok returned an HTML page instead of the API. Add ngrok-skip-browser-warning and verify NEXT_PUBLIC_BACKEND_URL.",
+      clientConfig.sameOrigin
+        ? "API proxy returned HTML. Set BACKEND_PROXY_URL to your ngrok URL and restart the frontend (npm run dev / npm run start)."
+        : "Ngrok returned an HTML page instead of the API. Verify NEXT_PUBLIC_BACKEND_URL and ngrok-skip-browser-warning.",
       0,
     );
   }
 
   storeXsrfTokenFromResponse(response.headers as Record<string, unknown>);
 
-  if (isCrossOriginBackend() && !xsrfToken) {
-    throw new ApiError(
-      "CSRF token was not received. Check SANCTUM_STATEFUL_DOMAINS, CORS exposed headers, and SESSION_SAME_SITE=none.",
-      0,
-    );
+  if (!xsrfToken) {
+    xsrfToken = readCookie("XSRF-TOKEN");
   }
 
-  if (!xsrfToken && !readCookie("XSRF-TOKEN")) {
+  if (!xsrfToken) {
+    if (clientConfig.sameOrigin) {
+      throw new ApiError(
+        "CSRF cookie was not set. Ensure BACKEND_PROXY_URL points to ngrok, backend is running, and restart the frontend after changing .env.",
+        0,
+      );
+    }
+
     throw new ApiError(
-      "CSRF token was not received. Check SANCTUM_STATEFUL_DOMAINS and CORS credentials.",
+      "CSRF token was not received. Use same-origin proxy: set NEXT_PUBLIC_API_URL and NEXT_PUBLIC_BACKEND_URL to your frontend URL (e.g. http://168.231.111.10:3000) and BACKEND_PROXY_URL to ngrok, then restart the frontend.",
       0,
     );
   }
