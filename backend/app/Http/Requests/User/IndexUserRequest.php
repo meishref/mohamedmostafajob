@@ -4,6 +4,7 @@ namespace App\Http\Requests\User;
 
 use App\Enums\UserStatus;
 use App\Models\User;
+use App\Support\Roles;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -20,7 +21,7 @@ class IndexUserRequest extends FormRequest
         return [
             'search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', Rule::enum(UserStatus::class)],
-            'role' => ['nullable', 'string', Rule::exists('roles', 'name')],
+            'role' => ['nullable', 'string', Rule::in(Roles::assignable())],
             'sort_by' => ['nullable', 'string', Rule::in(['name', 'email', 'status', 'created_at', 'updated_at'])],
             'sort_direction' => ['nullable', 'string', Rule::in(['asc', 'desc'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],

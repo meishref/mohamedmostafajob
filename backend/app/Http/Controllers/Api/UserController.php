@@ -153,12 +153,6 @@ class UserController extends BaseController
     {
         $this->authorize('create', User::class);
 
-        $roles = \Spatie\Permission\Models\Role::query()
-            ->where('guard_name', 'web')
-            ->whereIn('name', Roles::assignable())
-            ->orderBy('name')
-            ->pluck('name');
-
-        return $this->successResponse(['roles' => $roles]);
+        return $this->successResponse(['roles' => Roles::assignable()]);
     }
 }
