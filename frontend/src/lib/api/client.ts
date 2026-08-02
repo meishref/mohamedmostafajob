@@ -37,8 +37,6 @@ function safeOrigin(url: string, fallback: string): string {
 
 /** Resolve API URLs at runtime so proxy mode works even if only BACKEND_URL was updated. */
 function resolveClientApiConfig(): ClientApiConfig {
-  const fallback = env.appUrl;
-
   if (typeof window === "undefined") {
     const ngrokDirect = env.backendUrl.includes("ngrok") || env.apiUrl.includes("ngrok");
     return {

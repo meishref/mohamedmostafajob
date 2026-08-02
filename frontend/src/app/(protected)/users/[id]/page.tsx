@@ -13,6 +13,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Separator } from "@/components/ui/separator";
 import { Select } from "@/components/ui/select";
 import { RoleBadges } from "@/components/users/role-badges";
+import { useApiError } from "@/hooks/use-api-error";
 import { useRoleLabel } from "@/hooks/use-role-label";
 import { useFormatters } from "@/hooks/use-formatters";
 import { usePermissions } from "@/hooks/use-permissions";
