@@ -75,7 +75,7 @@ Do **not** open the backend ngrok URL for browsing (API only).
 | Problem | Fix |
 |---------|-----|
 | Network error | Frontend `.env.local` must point to **backend ngrok URL**, not `localhost` |
-| 419 CSRF | `SANCTUM_STATEFUL_DOMAINS` must match frontend hostname exactly |
+| 419 CSRF | `SANCTUM_STATEFUL_DOMAINS` must match frontend hostname exactly; `X-XSRF-TOKEN` header must match the `XSRF-TOKEN` cookie (encrypted value); run `php artisan config:clear` after env changes |
 | Login loop / no session | Set `SESSION_SAME_SITE=none` and `SESSION_SECURE_COOKIE=true` |
 | ngrok warning page on API | Frontend sends `ngrok-skip-browser-warning` automatically |
 | CORS blocked | Add exact frontend URL to `CORS_ALLOWED_ORIGINS` |
@@ -97,3 +97,25 @@ NEXT_PUBLIC_BACKEND_URL=https://abc123.ngrok-free.app
 ```
 
 Open app at `http://localhost:3000` (not ngrok).
+
+## 7. Backend ngrok + frontend on server IP
+
+If the frontend runs on `http://168.231.111.10:3000` and the API is exposed via ngrok:
+
+```env
+# backend/.env
+APP_URL=https://YOUR-BACKEND.ngrok-free.dev
+FRONTEND_URL=http://168.231.111.10:3000
+SANCTUM_STATEFUL_DOMAINS=168.231.111.10:3000
+CORS_ALLOWED_ORIGINS=http://168.231.111.10:3000
+SESSION_SECURE_COOKIE=true
+SESSION_SAME_SITE=none
+```
+
+After editing `.env`:
+
+```bash
+cd backend && php artisan config:clear
+```
+
+In DevTools → login request → verify `X-XSRF-TOKEN` header value **equals** the `XSRF-TOKEN` cookie value. If they differ, clear site cookies and retry.

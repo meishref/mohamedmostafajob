@@ -16,8 +16,9 @@ export class ApiError extends Error {
 
 const MUTATING_METHODS = new Set(["post", "put", "patch", "delete"]);
 
-/** Plain CSRF token for cross-origin requests (cookie is on the API host, not readable from JS). */
+/** Encrypted XSRF-TOKEN cookie value for cross-origin requests (must match the cookie sent by the browser). */
 let xsrfToken: string | null = null;
+let csrfPromise: Promise<void> | null = null;
 
 function isNgrokBackend(): boolean {
   return env.backendUrl.includes("ngrok");
@@ -44,9 +45,8 @@ function readCookie(name: string): string | null {
 }
 
 function applyXsrfHeader(config: InternalAxiosRequestConfig): void {
-  const token = xsrfToken ?? readCookie("XSRF-TOKEN");
-  if (token) {
-    config.headers.set("X-XSRF-TOKEN", token);
+  if (xsrfToken) {
+    config.headers.set("X-XSRF-TOKEN", xsrfToken);
   }
 }
 
@@ -126,8 +126,7 @@ function storeXsrfTokenFromResponse(headers: Record<string, unknown>): void {
   }
 }
 
-/** Fetch CSRF cookie + token (uses the same axios instance as all API calls). */
-export async function ensureCsrfCookie(): Promise<void> {
+async function fetchCsrfCookie(): Promise<void> {
   const response = await apiClient.get(`${env.backendUrl}/sanctum/csrf-cookie`, {
     headers: {
       Accept: "application/json",
@@ -145,12 +144,30 @@ export async function ensureCsrfCookie(): Promise<void> {
 
   storeXsrfTokenFromResponse(response.headers as Record<string, unknown>);
 
+  if (isCrossOriginBackend() && !xsrfToken) {
+    throw new ApiError(
+      "CSRF token was not received. Check SANCTUM_STATEFUL_DOMAINS, CORS exposed headers, and SESSION_SAME_SITE=none.",
+      0,
+    );
+  }
+
   if (!xsrfToken && !readCookie("XSRF-TOKEN")) {
     throw new ApiError(
       "CSRF token was not received. Check SANCTUM_STATEFUL_DOMAINS and CORS credentials.",
       0,
     );
   }
+}
+
+/** Fetch CSRF cookie + token (uses the same axios instance as all API calls). */
+export async function ensureCsrfCookie(): Promise<void> {
+  if (!csrfPromise) {
+    csrfPromise = fetchCsrfCookie().finally(() => {
+      csrfPromise = null;
+    });
+  }
+
+  return csrfPromise;
 }
 
 /** @deprecated Use ensureCsrfCookie — kept for existing imports */
